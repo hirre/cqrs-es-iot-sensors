@@ -18,13 +18,15 @@ namespace IoT.Domain.Sensor.Handlers
 
                 var responseList = new List<SensorDataCommandResponse>();
 
+                var now = DateTimeOffset.UtcNow;
+
                 foreach (var sensorDataItem in sensorData)
                 {
                     responseList.Add(new SensorDataCommandResponse
                     {
                         Id = sensorDataItem.Id,
                         SensorId = sensorDataItem.SensorId,
-                        ResponseTimestamp = DateTime.UtcNow,
+                        ResponseTimestamp = now,
                     });
                 }
 
