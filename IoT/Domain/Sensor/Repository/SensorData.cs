@@ -1,15 +1,15 @@
 ﻿using IoT.Common;
-using IoT.Interfaces;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
-namespace IoT.Domain.Sensor.Commands
+namespace IoT.Domain.Sensor.Repository
 {
-    public record StoreSensorCommand() : ICommand
+    public class SensorData
     {
-        public required IEnumerable<SensorCommandData> Data { get; init; }
-    }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? Id { get; init; }
 
-    public record SensorCommandData()
-    {
         public required string SensorId { get; init; }
 
         public required double Value { get; init; }

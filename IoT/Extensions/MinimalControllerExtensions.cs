@@ -9,7 +9,7 @@ namespace IoT.Extensions
     {
         public static void AddMinimalApiControllers(this WebApplication app)
         {
-            app.MapGet("/api/Sensors", async ([FromServices] IQueryHandler<SensorQuery> handler, [AsParameters] SensorQuery query) =>
+            app.MapGet("/api/Sensors", async ([FromServices] IQueryHandler<SensorQuery, SensorQueryResponse> handler, [AsParameters] SensorQuery query) =>
             {
                 var res = await handler.HandleAsync(query);
 
@@ -24,7 +24,8 @@ namespace IoT.Extensions
             .Produces(StatusCodes.Status500InternalServerError)
             .Produces(StatusCodes.Status400BadRequest);
 
-            app.MapPost("/api/Sensors", async ([FromServices] ICommandHandler<StoreSensorCommand, SensorCommandResponse> handler, [FromBody] StoreSensorCommand cmd) =>
+            app.MapPost("/api/Sensors", async ([FromServices] ICommandHandler<StoreSensorCommand, SensorCommandResponse> handler,
+                [FromBody] StoreSensorCommand cmd) =>
             {
                 var res = await handler.HandleAsync(cmd);
 

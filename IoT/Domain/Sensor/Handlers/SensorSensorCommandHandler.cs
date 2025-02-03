@@ -14,16 +14,21 @@ namespace IoT.Domain.Sensor.Handlers
         {
             try
             {
-                var response = new SensorCommandResponse
+                var sensorData = await _sensorRepository.StoreSensorDataAsync(command);
+
+                var responseList = new List<SensorDataCommandResponse>();
+
+                foreach (var sensorDataItem in sensorData)
                 {
-                    SensorId = command.SensorId,
-                    ResponseTimestamp = DateTime.UtcNow,
-                };
+                    responseList.Add(new SensorDataCommandResponse
+                    {
+                        Id = sensorDataItem.Id,
+                        SensorId = sensorDataItem.SensorId,
+                        ResponseTimestamp = DateTime.UtcNow,
+                    });
+                }
 
-                // TODO: store the sensor data
-                await Task.CompletedTask;
-
-                return Result<SensorCommandResponse>.Success(response);
+                return Result<SensorCommandResponse>.Success(new SensorCommandResponse() { Data = responseList });
             }
             catch (Exception ex)
             {

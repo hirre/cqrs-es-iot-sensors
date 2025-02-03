@@ -1,8 +1,6 @@
-﻿using IoT.Interfaces;
-
-namespace IoT.Domain.Sensor.Queries
+﻿namespace IoT.Domain.Sensor.Queries
 {
-    public record SensorQueryResponse : IResponse
+    public record SensorQueryResponse
     {
     }
 }

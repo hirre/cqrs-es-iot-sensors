@@ -2,8 +2,10 @@
 
 namespace IoT.Interfaces
 {
-    public interface IQueryHandler<TQuery> where TQuery : IQuery
+    public interface IQueryHandler<TQuery, TResponse>
+        where TQuery : IQuery
+        where TResponse : class
     {
-        public Task<Result<IResponse>> HandleAsync(TQuery query);
+        public Task<Result<TResponse>> HandleAsync(TQuery query);
     }
 }
