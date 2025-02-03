@@ -1,4 +1,5 @@
 ﻿using IoT.Domain.Sensor.Commands;
+using IoT.Domain.Sensor.Events;
 using IoT.Domain.Sensor.Handlers;
 using IoT.Domain.Sensor.Queries;
 using IoT.Domain.Sensor.Repository;
@@ -14,17 +15,17 @@ namespace IoT.Extensions
         {
             #region Sensor DI
 
-            services.AddScoped<ICommandHandler<StoreSensorCommand, SensorCommandResponse>, SensorSensorCommandHandler>();
+            services.AddScoped<ICommandHandler<StoreSensorDataCommand, StoreSensorDataCommandResponse>, SensorSensorCommandHandler>();
             services.AddScoped<IQueryHandler<SensorQuery, SensorQueryResponse>, SensorQueryHandler>();
             services.AddScoped<ISensorRepository, SensorRepository>();
 
             #endregion
 
             // Channel queue
-            services.AddSingleton<ChannelQueue<ISensorEvent>>();
+            services.AddSingleton<ChannelQueue<SensorEvent>>();
 
             // Mongo DB
-            services.AddSingleton<MongoDbContext>();
+            services.AddSingleton<SensorDbContext>();
 
             // Redis Cache
             services.AddStackExchangeRedisCache((options) =>

@@ -1,33 +1,66 @@
 ﻿using IoT.Domain.Sensor.Commands;
+using IoT.Domain.Sensor.Events;
+using IoT.Infrastructure;
 using IoT.Interfaces;
 using IoT.Persistence;
 
 namespace IoT.Domain.Sensor.Repository
 {
-    public class SensorRepository(ILogger<SensorRepository> logger, MongoDbContext mongoDbContext) : ISensorRepository
+    public class SensorRepository(ILogger<SensorRepository> logger, SensorDbContext mongoDbContext,
+        ChannelQueue<SensorEvent> channelQueue) : ISensorRepository
     {
         private readonly ILogger<SensorRepository> _logger = logger;
-        private readonly MongoDbContext _mongoDbContext = mongoDbContext;
+        private readonly SensorDbContext _mongoDbContext = mongoDbContext;
+        private readonly ChannelQueue<SensorEvent> _channelQueue = channelQueue;
 
-        public async Task<IEnumerable<SensorData>> StoreSensorDataAsync(StoreSensorCommand cmd)
+        public async Task<(string? ObjId, SensorEvent Event)> StoreSensorDataAsync(StoreSensorDataCommand cmd)
         {
-            var sensorDataList = new List<SensorData>();
-
-            foreach (var sensorCmdData in cmd.Data)
+            var sensorDbData = new SensorDbData()
             {
-                sensorDataList.Add(new SensorData
+                SensorId = cmd.SensorId,
+                SenorUnitType = cmd.SensorUnitType,
+                Period = cmd.Period,
+                DataPoints = cmd.Data.Select(x => new SensorDbDataPoint()
                 {
-                    SensorId = sensorCmdData.SensorId,
-                    Unit = sensorCmdData.Unit,
-                    Value = sensorCmdData.Value,
-                    Timestamp = sensorCmdData.Timestamp,
-                    TimestampRead = sensorCmdData.TimestampRead,
-                });
+                    Value = x.Value,
+                    TimestampRead = x.TimestampRead
+                }).ToList()
+            };
+
+            var sEvent = new SensorEvent()
+            {
+                AggregateId =
+                sensorDbData.SensorId
+            };
+
+            await _mongoDbContext.InsertSensorDataDocumentAsync(sensorDbData, sEvent);
+
+            return (sensorDbData.Id, sEvent);
+        }
+
+        public async Task HydrateReadModels(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                _logger.LogInformation("Hydrating read models...");
+
+                var eventBatch = await _mongoDbContext.GetSensorEventsAsync();
+
+                while (await eventBatch.MoveNextAsync(cancellationToken))
+                {
+                    var current = eventBatch.Current;
+
+                    foreach (var sensorEvent in current)
+                    {
+                        await _channelQueue.PublishAsync(sensorEvent);
+                    }
+                }
             }
-
-            await _mongoDbContext.InsertSensorDataDocumentsAsync(sensorDataList);
-
-            return sensorDataList;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while hydrating read models.");
+                throw;
+            }
         }
     }
 }

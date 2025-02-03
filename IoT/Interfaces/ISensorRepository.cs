@@ -1,10 +1,13 @@
 ﻿using IoT.Domain.Sensor.Commands;
-using IoT.Domain.Sensor.Repository;
+using IoT.Domain.Sensor.Events;
 
 namespace IoT.Interfaces
 {
     public interface ISensorRepository
     {
-        public Task<IEnumerable<SensorData>> StoreSensorDataAsync(StoreSensorCommand cmd);
+        public Task<(string? ObjId, SensorEvent Event)> StoreSensorDataAsync(StoreSensorDataCommand cmd);
+
+        public Task HydrateReadModels(CancellationToken cancellationToken = default);
+
     }
 }

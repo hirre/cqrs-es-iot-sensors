@@ -1,11 +1,6 @@
 ﻿namespace IoT.Domain.Sensor.Commands
 {
-    public record SensorCommandResponse
-    {
-        public required IEnumerable<SensorDataCommandResponse> Data { get; init; }
-    }
-
-    public record SensorDataCommandResponse
+    public record StoreSensorDataCommandResponse
     {
         public string? Id { get; init; }
 

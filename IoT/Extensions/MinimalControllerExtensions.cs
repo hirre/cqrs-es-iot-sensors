@@ -24,8 +24,8 @@ namespace IoT.Extensions
             .Produces(StatusCodes.Status500InternalServerError)
             .Produces(StatusCodes.Status400BadRequest);
 
-            app.MapPost("/api/Sensors", async ([FromServices] ICommandHandler<StoreSensorCommand, SensorCommandResponse> handler,
-                [FromBody] StoreSensorCommand cmd) =>
+            app.MapPost("/api/Sensors", async ([FromServices] ICommandHandler<StoreSensorDataCommand, StoreSensorDataCommandResponse> handler,
+                [FromBody] StoreSensorDataCommand cmd) =>
             {
                 var res = await handler.HandleAsync(cmd);
 
@@ -36,7 +36,7 @@ namespace IoT.Extensions
 
                 return Results.Ok(res.Data);
             })
-            .Produces<SensorCommandResponse>(StatusCodes.Status200OK)
+            .Produces<StoreSensorDataCommandResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status500InternalServerError)
             .Produces(StatusCodes.Status400BadRequest);
         }

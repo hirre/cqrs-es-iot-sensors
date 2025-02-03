@@ -1,9 +1,9 @@
-﻿using IoT.Interfaces;
+﻿using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
 namespace IoT.Infrastructure
 {
-    public class ChannelQueue<T> where T : ISensorEvent
+    public class ChannelQueue<T> where T : class
     {
         private readonly Channel<T> _channel;
 
@@ -23,14 +23,13 @@ namespace IoT.Infrastructure
             await _channel.Writer.WriteAsync(item);
         }
 
-        public async Task<T> WaitAndReadAsync(CancellationToken cancellationToken)
+        public async IAsyncEnumerable<T> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            while (await _channel.Reader.WaitToReadAsync(cancellationToken))
+            await _channel.Reader.WaitToReadAsync(cancellationToken); // Blocks until data is available
+
+            await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken)) // Blocks until data is available
             {
-                if (_channel.Reader.TryRead(out var item))
-                {
-                    return item;
-                }
+                yield return item;
             }
 
             throw new OperationCanceledException("The operation was canceled.");

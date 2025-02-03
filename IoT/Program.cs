@@ -1,4 +1,5 @@
 using IoT.Extensions;
+using IoT.Interfaces;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,5 +27,13 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var sensorRepo = scope.ServiceProvider.GetRequiredService<ISensorRepository>();
+
+    if (sensorRepo != null)
+        await sensorRepo.HydrateReadModels();
+}
 
 app.Run();
