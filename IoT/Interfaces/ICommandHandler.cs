@@ -2,8 +2,8 @@
 
 namespace IoT.Interfaces
 {
-    public interface ICommandHandler
+    public interface ICommandHandler<TCommand> where TCommand : ICommand
     {
-        public Task<Result<IResponse>> HandleAsync(ICommand command);
+        public Task<Result<IResponse>> HandleAsync(TCommand command);
     }
 }
