@@ -1,6 +1,7 @@
 ﻿using IoT.Domain.Sensor.Commands;
 using IoT.Domain.Sensor.Handlers;
 using IoT.Domain.Sensor.Queries;
+using IoT.Domain.Sensor.Repository;
 using IoT.Interfaces;
 
 namespace IoT.Extensions
@@ -9,8 +10,13 @@ namespace IoT.Extensions
     {
         public static void AddDependencies(this IServiceCollection services)
         {
-            services.AddScoped<ICommandHandler<StoreSensorCommand>, SensorSensorCommandHandler>();
+            #region Sensors
+
+            services.AddScoped<ICommandHandler<StoreSensorCommand, SensorCommandResponse>, SensorSensorCommandHandler>();
             services.AddScoped<IQueryHandler<SensorQuery>, SensorQueryHandler>();
+            services.AddScoped<ISensorRepository, SensorRepository>();
+
+            #endregion
         }
     }
 }
