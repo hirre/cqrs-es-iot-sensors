@@ -2,7 +2,8 @@
 
 namespace IoT.Domain.Sensor.Queries
 {
-    public class SensorQuery : IQuery
+    public record SensorQuery : IQuery
     {
+        public required string SensorId { get; init; }
     }
 }

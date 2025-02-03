@@ -9,7 +9,7 @@ namespace IoT.Extensions
     {
         public static void AddMinimalApiControllers(this WebApplication app)
         {
-            app.MapGet("/api/Sensors", async ([FromServices] IQueryHandler<SensorQuery> handler, [FromBody] SensorQuery query) =>
+            app.MapGet("/api/Sensors", async ([FromServices] IQueryHandler<SensorQuery> handler, [AsParameters] SensorQuery query) =>
             {
                 var res = await handler.HandleAsync(query);
 
