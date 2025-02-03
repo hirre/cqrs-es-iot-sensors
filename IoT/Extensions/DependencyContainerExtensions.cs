@@ -12,13 +12,16 @@ namespace IoT.Extensions
     {
         public static void AddIotDependencies(this IServiceCollection services)
         {
-            #region Sensors
+            #region Sensor DI
 
             services.AddScoped<ICommandHandler<StoreSensorCommand, SensorCommandResponse>, SensorSensorCommandHandler>();
             services.AddScoped<IQueryHandler<SensorQuery, SensorQueryResponse>, SensorQueryHandler>();
             services.AddScoped<ISensorRepository, SensorRepository>();
 
             #endregion
+
+            // Channel queue
+            services.AddSingleton<ChannelQueue<ISensorEvent>>();
 
             // Mongo DB
             services.AddSingleton<MongoDbContext>();

@@ -38,5 +38,22 @@ namespace IoT.Persistence
         {
             await _sensorDataCollection.InsertManyAsync(documents);  // Insert multiple documents
         }
+
+        public async Task<IAsyncCursor<SensorData>> GetSensorDataDocumentsAsync(string sensorId, DateTimeOffset startTime, DateTimeOffset stopTime, bool ascending = true)
+        {
+            if (string.IsNullOrEmpty(sensorId))
+            {
+                throw new ArgumentNullException(nameof(sensorId));
+            }
+
+            if (startTime > stopTime)
+            {
+                throw new ArgumentException("startTime must be less than stopTime");
+            }
+
+            return await _sensorDataCollection.Find(x => x.SensorId == sensorId && x.Timestamp >= startTime && x.Timestamp <= stopTime)
+                                              .Sort(Builders<SensorData>.Sort.Descending(x => x.Timestamp))
+                                              .ToCursorAsync();
+        }
     }
 }

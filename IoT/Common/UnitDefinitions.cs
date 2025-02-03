@@ -18,4 +18,12 @@
         Hertz,
         Decibel
     }
+
+    public enum Period
+    {
+        Day = 0,
+        Week,
+        Month,
+        Year
+    }
 }
