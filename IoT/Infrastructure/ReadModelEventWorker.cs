@@ -1,16 +1,17 @@
-﻿using IoT.Domain.Sensor.Events;
+﻿using IoT.Common;
 using IoT.Persistence;
+using IoT.Persistence.Events;
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace IoT.Infrastructure
 {
-    public class ReadModelEventWorker(ILogger<ReadModelEventWorker> logger, SensorDbContext mongoDbContext,
-        IDistributedCache distributedCache, ChannelQueue<SensorEvent> channelQueue) : BackgroundService
+    public class ReadModelEventWorker(ILogger<ReadModelEventWorker> logger, EventStore eventStore,
+        IDistributedCache distributedCache, ChannelQueue<Event> channelQueue) : BackgroundService
     {
         private readonly ILogger<ReadModelEventWorker> _logger = logger;
         private readonly IDistributedCache _distributedCache = distributedCache;
-        private readonly SensorDbContext _mongoDbContext = mongoDbContext;
-        private readonly ChannelQueue<SensorEvent> _channelQueue = channelQueue;
+        private readonly EventStore _eventStore = eventStore;
+        private readonly ChannelQueue<Event> _channelQueue = channelQueue;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -18,35 +19,40 @@ namespace IoT.Infrastructure
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                await foreach (var sensorEvent in _channelQueue.ReadAsync(stoppingToken))
+                await foreach (var e in _channelQueue.ReadAsync(stoppingToken))
                 {
-                    if (sensorEvent == null)
+                    if (e == null)
                     {
                         continue;
                     }
 
-                    if (sensorEvent is SensorEvent sensorCmdEvent)
+                    switch (e.EventType)
                     {
-                        await ProcessSensorCmdEvent(sensorCmdEvent);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Unknown event type: {EventType}", sensorEvent.GetType().Name);
+                        case EventTypes.SensorStoreCmdEvent:
+                            await ProcessSensorCmdEvent(e);
+                            break;
+
+                        default:
+                            _logger.LogWarning("Unknown event type: {EventType}", e.GetType().Name);
+                            break;
                     }
                 }
-
             }
 
             _logger.LogInformation("ReadModelEventWorker stopping.");
         }
 
-        private async Task ProcessSensorCmdEvent(SensorEvent sensorCmdEvent)
+        private async Task ProcessSensorCmdEvent(Event sensorCmdEvent)
         {
             try
             {
+                var sensorPayload = sensorCmdEvent.Payload as SensorPayload;
+
+                // TODO: remove
                 await Task.CompletedTask;
-                _logger.LogDebug($"EVENT: {sensorCmdEvent.AggregateId}\t | " +
-                    $"{sensorCmdEvent.SensorDbDataId}\t | " +
+
+                _logger.LogDebug($"EVENT: {sensorCmdEvent.Id}\t | " +
+                    $"{sensorCmdEvent.AggregateId}\t | " +
                     $"{sensorCmdEvent.Version}\t| " +
                     $"{sensorCmdEvent.Timestamp}");
             }

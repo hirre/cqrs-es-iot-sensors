@@ -1,6 +1,6 @@
 ﻿namespace IoT.Common
 {
-    public enum SensorEventTypes
+    public enum EventTypes
     {
         SensorStoreCmdEvent = 0
     }

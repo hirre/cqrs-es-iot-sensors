@@ -1,11 +1,11 @@
 ﻿using IoT.Domain.Sensor.Commands;
-using IoT.Domain.Sensor.Events;
 using IoT.Domain.Sensor.Handlers;
 using IoT.Domain.Sensor.Queries;
 using IoT.Domain.Sensor.Repository;
 using IoT.Infrastructure;
 using IoT.Interfaces;
 using IoT.Persistence;
+using IoT.Persistence.Events;
 
 namespace IoT.Extensions
 {
@@ -22,10 +22,10 @@ namespace IoT.Extensions
             #endregion
 
             // Channel queue
-            services.AddSingleton<ChannelQueue<SensorEvent>>();
+            services.AddSingleton<ChannelQueue<Event>>();
 
             // Mongo DB
-            services.AddSingleton<SensorDbContext>();
+            services.AddSingleton<EventStore>();
 
             // Redis Cache
             services.AddStackExchangeRedisCache((options) =>
