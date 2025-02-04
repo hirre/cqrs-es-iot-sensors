@@ -4,7 +4,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace IoT.Persistence.Events
 {
-    public class Event
+    public class DomainEvent
     {
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]

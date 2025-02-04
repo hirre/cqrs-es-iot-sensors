@@ -15,35 +15,35 @@ namespace IoT.Extensions
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
-        public static Task SetAsync<T>(this IDistributedCache cache, string key, T value)
-        {
-            return SetAsync(cache, key, value, new DistributedCacheEntryOptions()
-                .SetSlidingExpiration(TimeSpan.FromMinutes(30))
-                .SetAbsoluteExpiration(TimeSpan.FromHours(1)));
-        }
-
-        public static Task SetAsync<T>(this IDistributedCache cache, string key, T value, DistributedCacheEntryOptions options)
+        public static Task SetDataAsync<T>(this IDistributedCache cache, string key, T value, DistributedCacheEntryOptions? options = null)
         {
             var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(value, serializerOptions));
-            return cache.SetAsync(key, bytes, options);
+
+            if (options != null)
+            {
+                return cache.SetAsync(key, bytes, options);
+            }
+            else
+            {
+                return cache.SetAsync(key, bytes);
+            }
         }
 
-        public static bool TryGetValue<T>(this IDistributedCache cache, string key, out T? value)
+        public static bool TryGetDataValue<T>(this IDistributedCache cache, string key, out T? value)
         {
             var val = cache.Get(key);
             value = default;
+
             if (val == null) return false;
+
             value = JsonSerializer.Deserialize<T>(val, serializerOptions);
+
             return true;
         }
 
-        public static async Task<T?> GetOrSetAsync<T>(this IDistributedCache cache, string key, Func<Task<T>> task, DistributedCacheEntryOptions? options = null)
+        public static async Task<T?> GetOrSetDataAsync<T>(this IDistributedCache cache, string key, Func<Task<T>> task, DistributedCacheEntryOptions? options = null)
         {
-            options ??= new DistributedCacheEntryOptions()
-                .SetSlidingExpiration(TimeSpan.FromMinutes(30))
-                .SetAbsoluteExpiration(TimeSpan.FromHours(1));
-
-            if (cache.TryGetValue(key, out T? value) && value is not null)
+            if (cache.TryGetDataValue(key, out T? value) && value is not null)
             {
                 return value;
             }
@@ -52,7 +52,7 @@ namespace IoT.Extensions
 
             if (value is not null)
             {
-                await cache.SetAsync<T>(key, value, options);
+                await cache.SetDataAsync(key, value, options);
             }
 
             return value;

@@ -8,15 +8,15 @@ using IoT.Persistence.Events;
 namespace IoT.Domain.Sensor.Repository
 {
     public class SensorRepository(ILogger<SensorRepository> logger, EventStore eventStore,
-        ChannelQueue<Event> channelQueue) : ISensorRepository
+        ChannelQueue<DomainEvent> channelQueue) : ISensorRepository
     {
         private readonly ILogger<SensorRepository> _logger = logger;
         private readonly EventStore _eventStore = eventStore;
-        private readonly ChannelQueue<Event> _channelQueue = channelQueue;
+        private readonly ChannelQueue<DomainEvent> _channelQueue = channelQueue;
 
-        public async Task<Event> StoreSensorDataAsync(StoreSensorDataCommand cmd)
+        public async Task<DomainEvent> StoreSensorDataAsync(StoreSensorDataCommand cmd)
         {
-            var e = new Event()
+            var e = new DomainEvent()
             {
                 AggregateId = cmd.SensorId,
                 Timestamp = DateTimeOffset.UtcNow,

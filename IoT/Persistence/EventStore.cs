@@ -9,7 +9,7 @@ namespace IoT.Persistence
         private readonly ILogger<EventStore> _logger;
         private readonly IConfiguration _config;
         private readonly IMongoDatabase _mongoDatabase;
-        private readonly IMongoCollection<Event> _eventCollection;
+        private readonly IMongoCollection<DomainEvent> _eventCollection;
 
         public EventStore(ILogger<EventStore> logger, IConfiguration config)
         {
@@ -30,19 +30,19 @@ namespace IoT.Persistence
 
             _mongoDatabase.CreateCollection(_config.GetSection("MongoDb:EventStoreCollectionName").Value);
 
-            _eventCollection = _mongoDatabase.GetCollection<Event>(_config.GetSection("MongoDb:EventStoreCollectionName").Value);
-            var eventIndexKeys = Builders<Event>.IndexKeys.Ascending("Timestamp").Ascending(x => x.Version);
-            _eventCollection.Indexes.CreateOne(new CreateIndexModel<Event>(eventIndexKeys));
+            _eventCollection = _mongoDatabase.GetCollection<DomainEvent>(_config.GetSection("MongoDb:EventStoreCollectionName").Value);
+            var eventIndexKeys = Builders<DomainEvent>.IndexKeys.Ascending("Timestamp").Ascending(x => x.Version);
+            _eventCollection.Indexes.CreateOne(new CreateIndexModel<DomainEvent>(eventIndexKeys));
         }
 
-        public async Task AppendEventAsync(Event document)
+        public async Task AppendEventAsync(DomainEvent document)
         {
             ArgumentNullException.ThrowIfNull(document);
 
             // Find the latest version of this aggregate's events
             var lastEvent = await _eventCollection
-                .Find(Builders<Event>.Filter.Eq(x => x.AggregateId, document.AggregateId))
-                .Sort(Builders<Event>.Sort.Descending(x => x.Version))
+                .Find(Builders<DomainEvent>.Filter.Eq(x => x.AggregateId, document.AggregateId))
+                .Sort(Builders<DomainEvent>.Sort.Descending(x => x.Version))
                 .Limit(1)
                 .FirstOrDefaultAsync();
 
@@ -51,10 +51,10 @@ namespace IoT.Persistence
             await _eventCollection.InsertOneAsync(document);
         }
 
-        public async Task<IAsyncCursor<Event>> GetEventsAsync()
+        public async Task<IAsyncCursor<DomainEvent>> GetEventsAsync()
         {
-            return await _eventCollection.Find(Builders<Event>.Filter.Empty)
-                                               .Sort(Builders<Event>.Sort.Ascending("Timestamp")
+            return await _eventCollection.Find(Builders<DomainEvent>.Filter.Empty)
+                                               .Sort(Builders<DomainEvent>.Sort.Ascending("Timestamp")
                                                .Ascending(x => x.Version))
                                                .ToCursorAsync();
         }

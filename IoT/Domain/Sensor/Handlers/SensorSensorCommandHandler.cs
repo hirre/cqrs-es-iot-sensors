@@ -7,12 +7,12 @@ using IoT.Persistence.Events;
 namespace IoT.Domain.Sensor.Handlers
 {
     public class SensorSensorCommandHandler(ILogger<SensorSensorCommandHandler> logger,
-        ISensorRepository sensorRepository, ChannelQueue<Event> channelQueue)
+        ISensorRepository sensorRepository, ChannelQueue<DomainEvent> channelQueue)
         : ICommandHandler<StoreSensorDataCommand, StoreSensorDataCommandResponse>
     {
         private readonly ILogger<SensorSensorCommandHandler> _logger = logger;
         private readonly ISensorRepository _sensorRepository = sensorRepository;
-        private readonly ChannelQueue<Event> _channelQueue = channelQueue;
+        private readonly ChannelQueue<DomainEvent> _channelQueue = channelQueue;
 
         public async Task<Result<StoreSensorDataCommandResponse>> HandleAsync(StoreSensorDataCommand command)
         {

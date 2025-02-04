@@ -11,7 +11,7 @@ namespace IoT.Extensions
 {
     public static class DependencyContainerExtensions
     {
-        public static void AddIotDependencies(this IServiceCollection services)
+        public static void AddIotDependencies(this IServiceCollection services, IConfiguration configuration)
         {
             #region Sensor DI
 
@@ -22,19 +22,24 @@ namespace IoT.Extensions
             #endregion
 
             // Channel queue
-            services.AddSingleton<ChannelQueue<Event>>();
+            services.AddSingleton<ChannelQueue<DomainEvent>>();
 
             // Mongo DB
             services.AddSingleton<EventStore>();
 
+            var redisEndpoint = configuration.GetSection("Redis:ConnectionString").Value;
+
+            if (string.IsNullOrEmpty(redisEndpoint))
+            {
+                redisEndpoint = "localhost:6379";
+            }
+
             // Redis Cache
             services.AddStackExchangeRedisCache((options) =>
             {
-                options.Configuration = "localhost";
                 options.ConfigurationOptions = new StackExchange.Redis.ConfigurationOptions()
                 {
-                    AbortOnConnectFail = true,
-                    EndPoints = { options.Configuration }
+                    EndPoints = { redisEndpoint }
                 };
             });
 
