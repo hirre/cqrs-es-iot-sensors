@@ -3,7 +3,8 @@ A CQRS + event sourcing solution for storing and viewing IoT sensor data.
 
 Architecture overview:
 
-![image](https://github.com/user-attachments/assets/57518d43-cc5e-49f6-9ea6-db9f3c68f82f)
+![image](https://github.com/user-attachments/assets/dec57763-78fb-4c91-8e3c-330108cc4d84)
+
 
 
 ## Setup
