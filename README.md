@@ -1,4 +1,4 @@
-# CQRS IoT Sensors
+# CQRS ES IoT Sensors
 A CQRS + event sourcing solution for storing and viewing IoT sensor data.
 
 Architecture overview:
