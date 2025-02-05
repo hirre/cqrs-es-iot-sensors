@@ -1,28 +1,21 @@
 ﻿using IoT.Common;
 using IoT.Domain.Sensor.Commands;
-using IoT.Infrastructure;
 using IoT.Interfaces;
-using IoT.Persistence.Events;
 
 namespace IoT.Domain.Sensor.Handlers
 {
-    public class SensorSensorCommandHandler(ILogger<SensorSensorCommandHandler> logger,
-        ISensorRepository sensorRepository, ChannelQueue<DomainEvent> channelQueue)
+    public class SensorStoreCommandHandler(ILogger<SensorStoreCommandHandler> logger,
+        ISensorRepository sensorRepository)
         : ICommandHandler<StoreSensorDataCommand, StoreSensorDataCommandResponse>
     {
-        private readonly ILogger<SensorSensorCommandHandler> _logger = logger;
+        private readonly ILogger<SensorStoreCommandHandler> _logger = logger;
         private readonly ISensorRepository _sensorRepository = sensorRepository;
-        private readonly ChannelQueue<DomainEvent> _channelQueue = channelQueue;
 
         public async Task<Result<StoreSensorDataCommandResponse>> HandleAsync(StoreSensorDataCommand command)
         {
             try
             {
                 var e = await _sensorRepository.StoreSensorDataAsync(command);
-
-                // Publish events
-                await _channelQueue
-                    .PublishAsync(e);
 
                 return Result<StoreSensorDataCommandResponse>
                     .Success(new StoreSensorDataCommandResponse()

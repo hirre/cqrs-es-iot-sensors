@@ -15,8 +15,9 @@ namespace IoT.Extensions
         {
             #region Sensor DI
 
-            services.AddScoped<ICommandHandler<StoreSensorDataCommand, StoreSensorDataCommandResponse>, SensorSensorCommandHandler>();
-            services.AddScoped<IQueryHandler<SensorQuery, SensorQueryResponse>, SensorQueryHandler>();
+            services.AddScoped<ICommandHandler<StoreSensorDataCommand, StoreSensorDataCommandResponse>, SensorStoreCommandHandler>();
+            services.AddScoped<IQueryHandler<SensorGetLatestMonthlyAvgQuery, SensorQueryResponse>, SensorGetLatestMonthlyAvgQueryHandler>();
+            services.AddScoped<IQueryHandler<SensorGetLatestDailyAvgQuery, SensorQueryResponse>, SensorGetLatestDailyAvgQueryHandler>();
             services.AddScoped<ISensorRepository, SensorRepository>();
 
             #endregion

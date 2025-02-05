@@ -1,5 +1,6 @@
 ﻿using IoT.Common;
 using IoT.Persistence.Events;
+using System.Collections.Concurrent;
 
 namespace IoT.Domain.Sensor.Aggregates
 {
@@ -8,9 +9,9 @@ namespace IoT.Domain.Sensor.Aggregates
         private DateOnly _maxDate31Day = DateOnly.MinValue;
         private DateTime _maxDate24Hour = DateTime.MinValue;
 
-        public Dictionary<DateOnly, SensorDayAggregate> CyclicSensor31DayAggregates { get; } = [];
+        public ConcurrentDictionary<DateOnly, SensorDayAggregate> CyclicSensor31DayAggregates { get; } = [];
 
-        public Dictionary<DateTime, SensorHourAggregate> CyclicSensor24HourAggregates { get; } = [];
+        public ConcurrentDictionary<DateTime, SensorHourAggregate> CyclicSensor24HourAggregates { get; } = [];
 
         public double CalculatedMonthlyAverage { get; private set; }
 

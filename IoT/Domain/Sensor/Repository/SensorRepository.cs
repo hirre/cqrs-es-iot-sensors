@@ -1,18 +1,23 @@
 ﻿using IoT.Common;
+using IoT.Domain.Sensor.Aggregates;
 using IoT.Domain.Sensor.Commands;
+using IoT.Extensions;
 using IoT.Infrastructure;
 using IoT.Interfaces;
 using IoT.Persistence;
 using IoT.Persistence.Events;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace IoT.Domain.Sensor.Repository
 {
     public class SensorRepository(ILogger<SensorRepository> logger, EventStore eventStore,
-        ChannelQueue<DomainEvent> channelQueue) : ISensorRepository
+        ChannelQueue<DomainEvent> channelQueue,
+        IDistributedCache distributedCache) : ISensorRepository
     {
         private readonly ILogger<SensorRepository> _logger = logger;
         private readonly EventStore _eventStore = eventStore;
         private readonly ChannelQueue<DomainEvent> _channelQueue = channelQueue;
+        private readonly IDistributedCache _distributedCache = distributedCache;
 
         public async Task<DomainEvent> StoreSensorDataAsync(StoreSensorDataCommand cmd)
         {
@@ -34,6 +39,8 @@ namespace IoT.Domain.Sensor.Repository
             };
 
             await _eventStore.AppendEventAsync(e);
+
+            await _channelQueue.PublishAsync(e);
 
             return e;
         }
@@ -61,6 +68,40 @@ namespace IoT.Domain.Sensor.Repository
                 _logger.LogError(ex, "An error occurred while hydrating read models.");
                 throw;
             }
+        }
+
+        public Task<(UnitType, double)> GetLatestMonthlyAverageAsync(string aggregateId)
+        {
+            var cacheKey = $"AggregateId:{aggregateId}";
+
+            if (_distributedCache.TryGetDataValue<SensorAggregateRoot>(cacheKey, out var sensorAggregateRoot))
+            {
+                if (sensorAggregateRoot == null)
+                {
+                    throw new Exception("Sensor aggregate root was null.");
+                }
+
+                return Task.FromResult((sensorAggregateRoot.UnitType, sensorAggregateRoot.CalculatedMonthlyAverage));
+            }
+
+            throw new Exception("Sensor aggregate root not found.");
+        }
+
+        public Task<(UnitType, double)> GetLatestDailyAverageAsync(string aggregateId)
+        {
+            var cacheKey = $"AggregateId:{aggregateId}";
+
+            if (_distributedCache.TryGetDataValue<SensorAggregateRoot>(cacheKey, out var sensorAggregateRoot))
+            {
+                if (sensorAggregateRoot == null)
+                {
+                    throw new Exception("Sensor aggregate root was null.");
+                }
+
+                return Task.FromResult((sensorAggregateRoot.UnitType, sensorAggregateRoot.CalculatedDailyAverage));
+            }
+
+            throw new Exception("Sensor aggregate root not found.");
         }
     }
 }
