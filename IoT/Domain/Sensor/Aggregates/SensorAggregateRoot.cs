@@ -1,20 +1,27 @@
 ﻿using IoT.Common;
 using IoT.Persistence.Events;
+using MessagePack;
 using System.Collections.Concurrent;
 
 namespace IoT.Domain.Sensor.Aggregates
 {
-    public class SensorAggregateRoot(string aggregateId, UnitType unitType) : AbstractSensorAggregateRoot(aggregateId, unitType)
+    [MessagePackObject]
+    [method: SerializationConstructor]
+    public partial class SensorAggregateRoot(string aggregateId, UnitType unitType) : AbstractSensorAggregateRoot(aggregateId, unitType)
     {
         private DateOnly _maxDate31Day = DateOnly.MinValue;
         private DateTime _maxDate24Hour = DateTime.MinValue;
 
+        [Key(2)]
         public ConcurrentDictionary<DateOnly, SensorDayAggregate> CyclicSensor31DayAggregates { get; } = [];
 
+        [Key(3)]
         public ConcurrentDictionary<DateTime, SensorHourAggregate> CyclicSensor24HourAggregates { get; } = [];
 
+        [Key(4)]
         public double CalculatedMonthlyAverage { get; private set; }
 
+        [Key(5)]
         public double CalculatedDailyAverage { get; private set; }
 
         public override void ApplyEvent(DomainEvent e, object? data = null)
@@ -98,6 +105,11 @@ namespace IoT.Domain.Sensor.Aggregates
                 count++;
             }
 
+            if (count == 0)
+            {
+                return;
+            }
+
             CalculatedMonthlyAverage = (double)(sum / count);
         }
 
@@ -112,6 +124,11 @@ namespace IoT.Domain.Sensor.Aggregates
             {
                 sum += CyclicSensor24HourAggregates[hourAggregateKey].Value;
                 count++;
+            }
+
+            if (count == 0)
+            {
+                return;
             }
 
             CalculatedDailyAverage = (double)(sum / count);

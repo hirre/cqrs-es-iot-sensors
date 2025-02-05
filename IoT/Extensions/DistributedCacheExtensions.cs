@@ -1,23 +1,12 @@
 ﻿using Microsoft.Extensions.Caching.Distributed;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace IoT.Extensions
 {
     public static class DistributedCacheExtensions
     {
-        private static readonly JsonSerializerOptions serializerOptions = new()
-        {
-            PropertyNamingPolicy = null,
-            WriteIndented = true,
-            AllowTrailingCommas = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
-
         public static Task SetDataAsync<T>(this IDistributedCache cache, string key, T value, DistributedCacheEntryOptions? options = null)
         {
-            var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(value, serializerOptions));
+            var bytes = MessagePack.MessagePackSerializer.Serialize(value);
 
             if (options != null)
             {
@@ -36,7 +25,7 @@ namespace IoT.Extensions
 
             if (val == null) return false;
 
-            value = JsonSerializer.Deserialize<T>(val, serializerOptions);
+            value = MessagePack.MessagePackSerializer.Deserialize<T>(val);
 
             return true;
         }
