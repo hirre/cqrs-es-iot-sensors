@@ -2,8 +2,7 @@
 
 namespace IoT.Domain.Sensor.Aggregates
 {
-    public class SensorDayAggregate : AbstractAggregate
+    public class SensorDayAggregate(double value, DateTimeOffset timestamp) : AbstractSensorAggregate(value, timestamp)
     {
-        public override Period Period { get; } = Period.Daily;
     }
 }

@@ -2,8 +2,7 @@
 
 namespace IoT.Domain.Sensor.Aggregates
 {
-    public class SensorHourAggregate : AbstractAggregate
+    public class SensorHourAggregate(double value, DateTimeOffset timestamp) : AbstractSensorAggregate(value, timestamp)
     {
-        public override Period Period { get; } = Period.Hourly;
     }
 }

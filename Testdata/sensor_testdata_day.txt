@@ -1,0 +1,12 @@
+{
+  "sensorId": "125342543",
+  "sensorUnitType": 9,
+  "period": 3,
+  "timestamp": "2025-02-06T00:00:00Z",
+  "data": [
+    {
+      "value": 23.3,
+      "timestampRead": "2025-02-06T00:00:00Z"
+    }
+  ]
+}

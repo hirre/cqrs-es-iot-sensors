@@ -23,7 +23,7 @@ namespace IoT.Domain.Sensor.Repository
                 EventType = EventTypes.SensorStoreCmdEvent,
                 Payload = new SensorPayload()
                 {
-                    SenorUnitType = cmd.SensorUnitType,
+                    UnitType = cmd.SensorUnitType,
                     Period = cmd.Period,
                     DataPoints = cmd.Data.Select(x => new SensorDbDataPoint()
                     {

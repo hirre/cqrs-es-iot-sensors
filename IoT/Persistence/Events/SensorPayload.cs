@@ -4,7 +4,7 @@ namespace IoT.Persistence.Events
 {
     public class SensorPayload : AbstractPayload
     {
-        public required SensorValueUnit SenorUnitType { get; init; }
+        public required UnitType UnitType { get; init; }
 
         public required Period Period { get; init; }
 

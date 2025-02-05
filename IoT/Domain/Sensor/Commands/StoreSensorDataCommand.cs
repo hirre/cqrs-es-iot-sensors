@@ -7,7 +7,7 @@ namespace IoT.Domain.Sensor.Commands
     {
         public required string SensorId { get; init; }
 
-        public required SensorValueUnit SensorUnitType { get; init; }
+        public required UnitType SensorUnitType { get; init; }
 
         public required Period Period { get; init; }
 

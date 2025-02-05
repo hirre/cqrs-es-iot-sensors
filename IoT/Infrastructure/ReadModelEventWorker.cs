@@ -1,18 +1,17 @@
 ﻿using IoT.Common;
 using IoT.Domain.Sensor.Aggregates;
 using IoT.Extensions;
-using IoT.Persistence;
+using IoT.Interfaces;
 using IoT.Persistence.Events;
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace IoT.Infrastructure
 {
-    public class ReadModelEventWorker(ILogger<ReadModelEventWorker> logger, EventStore eventStore,
-        IDistributedCache distributedCache, ChannelQueue<DomainEvent> channelQueue) : BackgroundService
+    public class ReadModelEventWorker(ILogger<ReadModelEventWorker> logger,
+            IDistributedCache distributedCache, ChannelQueue<DomainEvent> channelQueue) : BackgroundService
     {
         private readonly ILogger<ReadModelEventWorker> _logger = logger;
         private readonly IDistributedCache _distributedCache = distributedCache;
-        private readonly EventStore _eventStore = eventStore;
         private readonly ChannelQueue<DomainEvent> _channelQueue = channelQueue;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -28,15 +27,22 @@ namespace IoT.Infrastructure
                         continue;
                     }
 
-                    switch (e.EventType)
+                    try
                     {
-                        case EventTypes.SensorStoreCmdEvent:
-                            await ProcessSensorCmdEvent(e);
-                            break;
+                        var cacheKey = $"AggregateId:{e.AggregateId}";
 
-                        default:
-                            _logger.LogWarning("Unknown event type: {EventType}", e.GetType().Name);
-                            break;
+                        IAggregate? aggregate = await CreateAggregate(e, cacheKey);
+
+                        if (aggregate != null)
+                        {
+                            aggregate.ApplyEvent(e);
+
+                            await UpdateCache(aggregate, cacheKey);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing sensor event");
                     }
 
                     _logger.LogDebug($"EVENT: {e.Id}\t | " +
@@ -49,35 +55,31 @@ namespace IoT.Infrastructure
             _logger.LogInformation("ReadModelEventWorker stopping.");
         }
 
-        private async Task ProcessSensorCmdEvent(DomainEvent sensorCmdEvent)
+        private async Task<IAggregate?> CreateAggregate(DomainEvent e, string cacheKey)
         {
-            try
+            if (e.EventType == EventTypes.SensorStoreCmdEvent)
             {
-                var sensorPayload = sensorCmdEvent.Payload as SensorPayload;
-
-                if (sensorPayload == null)
+                if (e.Payload is not SensorPayload payload)
                 {
-                    _logger.LogWarning("Sensor payload is null");
-                    return;
+                    return null;
                 }
-
-                var cacheKey = $"Sensor:{sensorCmdEvent.AggregateId}";
 
                 // Lookup aggregate in cache (or create if it doesn't exist)
-                var aggregate = await _distributedCache.GetOrSetDataAsync(cacheKey, () =>
+                return await _distributedCache.GetOrSetDataAsync(cacheKey, () =>
                 {
-                    return Task.FromResult(new SensorAggregateRoot(sensorCmdEvent.AggregateId));
+                    return Task.FromResult(new SensorAggregateRoot(e.AggregateId, payload.UnitType));
                 });
-
-                if (aggregate != null)
-                {
-                    aggregate.ApplyEvent(sensorCmdEvent);
-                    await _distributedCache.SetDataAsync(cacheKey, aggregate);
-                }
             }
-            catch (Exception ex)
+
+            return null;
+        }
+
+        private async Task UpdateCache(IAggregate aggregate, string cacheKey)
+        {
+            if (aggregate is SensorAggregateRoot sar)
             {
-                _logger.LogError(ex, "Error processing sensor event");
+                // Update aggregate in cache
+                await _distributedCache.SetDataAsync(cacheKey, sar);
             }
         }
     }

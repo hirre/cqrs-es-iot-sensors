@@ -1,6 +1,6 @@
 ﻿namespace IoT.Common
 {
-    public enum SensorValueUnit
+    public enum UnitType
     {
         Other = 0,
         Celsius,
