@@ -126,7 +126,7 @@ namespace IoT.Persistence
                                              .FirstOrDefaultAsync();
         }
 
-        public async Task<List<string>> GetUniqueAggregateIdsAsync()
+        public async Task<IEnumerable<string>> GetUniqueAggregateIdsAsync()
         {
             var aggregateIds = await _eventCollection.DistinctAsync<string>("AggregateId", Builders<DomainEvent>.Filter.Empty);
             return await aggregateIds.ToListAsync();

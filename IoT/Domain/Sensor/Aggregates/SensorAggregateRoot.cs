@@ -30,6 +30,9 @@ namespace IoT.Domain.Sensor.Aggregates
             {
                 ApplySensorStoreCmdEvent(e, sensorPayload);
             }
+
+            // Update version
+            Version = e.Version;
         }
 
         private void ApplySensorStoreCmdEvent(DomainEvent e, SensorPayload sensorPayload)

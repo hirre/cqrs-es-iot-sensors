@@ -73,9 +73,9 @@ namespace IoT.Domain.Sensor.Repository
 
                     while (await eventBatch.MoveNextAsync(cancellationToken))
                     {
-                        var domainEvent = eventBatch.Current;
+                        var domainEvents = eventBatch.Current;
 
-                        foreach (var e in domainEvent)
+                        foreach (var e in domainEvents)
                         {
                             await _channelQueue.PublishAsync(e);
                         }
@@ -132,8 +132,14 @@ namespace IoT.Domain.Sensor.Repository
             if (aggregateRawData != null &&
                 _distributedCache.TryGetDataValue<SensorAggregateRoot>(cacheKey, out var aggregateRoot) && aggregateRoot != null)
             {
+                _logger.LogInformation($"Taking snapshot for aggregate {aggregateId}...");
                 await _eventStore.StoreSnapShotAsync(aggregateRoot.AggregateId, aggregateRoot.Version, aggregateRawData);
             }
+        }
+
+        public Task<IEnumerable<string>> GetUniqueAggregateIds()
+        {
+            return _eventStore.GetUniqueAggregateIdsAsync();
         }
     }
 }

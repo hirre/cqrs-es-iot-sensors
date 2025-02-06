@@ -15,5 +15,7 @@ namespace IoT.Interfaces
         public Task HydrateReadModels(CancellationToken cancellationToken = default);
 
         public Task TakeSnapShot(string aggregateId);
+
+        public Task<IEnumerable<string>> GetUniqueAggregateIds();
     }
 }
