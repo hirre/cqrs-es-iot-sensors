@@ -12,16 +12,16 @@ namespace IoT.Domain.Sensor.Aggregates
         private DateOnly _maxDate31Day = DateOnly.MinValue;
         private DateTime _maxDate24Hour = DateTime.MinValue;
 
-        [Key(2)]
+        [Key(3)]
         public ConcurrentDictionary<DateOnly, SensorDayAggregate> CyclicSensor31DayAggregates { get; } = [];
 
-        [Key(3)]
+        [Key(4)]
         public ConcurrentDictionary<DateTime, SensorHourAggregate> CyclicSensor24HourAggregates { get; } = [];
 
-        [Key(4)]
+        [Key(5)]
         public double CalculatedMonthlyAverage { get; private set; }
 
-        [Key(5)]
+        [Key(6)]
         public double CalculatedDailyAverage { get; private set; }
 
         public override void ApplyEvent(DomainEvent e, object? data = null)

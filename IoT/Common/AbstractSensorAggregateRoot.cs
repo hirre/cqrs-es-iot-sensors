@@ -16,6 +16,9 @@ namespace IoT.Common
         [Key(1)]
         public UnitType UnitType { get; } = unitType;
 
+        [Key(2)]
+        public int Version { get; set; }
+
         public virtual void ApplyEvent(DomainEvent e, object? data = null)
         {
             // Default no behavior

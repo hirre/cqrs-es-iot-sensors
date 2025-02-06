@@ -51,15 +51,34 @@ namespace IoT.Domain.Sensor.Repository
             {
                 _logger.LogInformation("Hydrating read models...");
 
-                var eventBatch = await _eventStore.GetEventsAsync();
+                var uniqueAggregates = await _eventStore.GetUniqueAggregateIdsAsync();
 
-                while (await eventBatch.MoveNextAsync(cancellationToken))
+                foreach (var aggregateId in uniqueAggregates)
                 {
-                    var current = eventBatch.Current;
+                    // Restore the snapshots first
+                    var snapshot = await _eventStore.GetLatestSnapshotAsync(aggregateId);
 
-                    foreach (var sensorEvent in current)
+                    var startVersion = 0;
+
+                    if (snapshot != null)
                     {
-                        await _channelQueue.PublishAsync(sensorEvent);
+                        startVersion = snapshot.Version + 1;
+                        var cacheKey = $"AggregateId:{snapshot.AggregateId}";
+                        await _distributedCache.SetAsync(cacheKey, snapshot.Data);
+                        _logger.LogInformation("Restored snapshot for aggregate {AggregateId}.", snapshot.AggregateId);
+                    }
+
+                    // Restore the rest of the events
+                    var eventBatch = await _eventStore.GetEventsAsync(aggregateId, startVersion);
+
+                    while (await eventBatch.MoveNextAsync(cancellationToken))
+                    {
+                        var domainEvent = eventBatch.Current;
+
+                        foreach (var e in domainEvent)
+                        {
+                            await _channelQueue.PublishAsync(e);
+                        }
                     }
                 }
             }
@@ -102,6 +121,19 @@ namespace IoT.Domain.Sensor.Repository
             }
 
             throw new Exception("Sensor aggregate root not found.");
+        }
+
+        public async Task TakeSnapShot(string aggregateId)
+        {
+            var cacheKey = $"AggregateId:{aggregateId}";
+
+            var aggregateRawData = await _distributedCache.GetAsync(cacheKey);
+
+            if (aggregateRawData != null &&
+                _distributedCache.TryGetDataValue<SensorAggregateRoot>(cacheKey, out var aggregateRoot) && aggregateRoot != null)
+            {
+                await _eventStore.StoreSnapShotAsync(aggregateRoot.AggregateId, aggregateRoot.Version, aggregateRawData);
+            }
         }
     }
 }

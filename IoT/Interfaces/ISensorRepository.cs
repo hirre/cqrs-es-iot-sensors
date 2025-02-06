@@ -13,5 +13,7 @@ namespace IoT.Interfaces
         public Task<(UnitType UnitType, double Value)> GetLatestDailyAverageAsync(string aggregateId);
 
         public Task HydrateReadModels(CancellationToken cancellationToken = default);
+
+        public Task TakeSnapShot(string aggregateId);
     }
 }
