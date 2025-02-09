@@ -14,6 +14,7 @@ namespace IoT.Persistence
         private readonly ILogger<EventStore> _logger;
         private readonly IConfiguration _config;
         private readonly IMongoDatabase _mongoDatabase;
+        private readonly MongoClient _mongoClient;
         private readonly IMongoCollection<DomainEvent> _eventCollection;
         private readonly IMongoCollection<Snapshot> _snapshotCollection;
 
@@ -22,8 +23,8 @@ namespace IoT.Persistence
             _logger = logger;
             _config = config;
 
-            var mongoClient = new MongoClient(_config.GetSection(EVENTSTORE_CONNECTIONSTRING_KEY).Value);
-            _mongoDatabase = mongoClient.GetDatabase(_config.GetSection(EVENTSTORE_DBNAME_KEY).Value);
+            _mongoClient = new MongoClient(_config.GetSection(EVENTSTORE_CONNECTIONSTRING_KEY).Value);
+            _mongoDatabase = _mongoClient.GetDatabase(_config.GetSection(EVENTSTORE_DBNAME_KEY).Value);
 
             if (_mongoDatabase == null)
             {
@@ -60,16 +61,30 @@ namespace IoT.Persistence
         {
             ArgumentNullException.ThrowIfNull(document);
 
-            // Find the latest version of this aggregate's events
-            var lastEvent = await _eventCollection
-                .Find(Builders<DomainEvent>.Filter.Eq(x => x.AggregateId, document.AggregateId))
-                .Sort(Builders<DomainEvent>.Sort.Descending(x => x.Version))
-                .Limit(1)
-                .FirstOrDefaultAsync();
+            using var session = await _mongoClient.StartSessionAsync();
+            session.StartTransaction();
 
-            document.Version = lastEvent == null ? 1 : lastEvent.Version + 1;
+            try
+            {
+                // Find the latest version of this aggregate's events
+                var lastEvent = await _eventCollection
+                    .Find(Builders<DomainEvent>.Filter.Eq(x => x.AggregateId, document.AggregateId))
+                    .Sort(Builders<DomainEvent>.Sort.Descending(x => x.Version))
+                    .Limit(1)
+                    .FirstOrDefaultAsync();
 
-            await _eventCollection.InsertOneAsync(document);
+                document.Version = lastEvent == null ? 1 : lastEvent.Version + 1;
+
+                await _eventCollection.InsertOneAsync(document);
+
+                await session.CommitTransactionAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while appending event.");
+                await session.AbortTransactionAsync();
+                throw;
+            }
         }
 
         public async Task<IAsyncCursor<DomainEvent>> GetEventsAsync(string aggregateId, int startVersion)
@@ -86,20 +101,34 @@ namespace IoT.Persistence
 
         public async Task StoreSnapShotAsync(string aggregateId, int version, byte[] data)
         {
-            var snap = await GetSnapshotAsync(aggregateId, version);
+            using var session = await _mongoClient.StartSessionAsync();
+            session.StartTransaction();
 
-            if (snap != null)
-                return;
-
-            var snapshot = new Snapshot()
+            try
             {
-                AggregateId = aggregateId,
-                Version = version,
-                Timestamp = DateTimeOffset.UtcNow,
-                Data = data
-            };
+                var snap = await GetSnapshotAsync(aggregateId, version);
 
-            await _snapshotCollection.InsertOneAsync(snapshot);
+                if (snap != null)
+                    return;
+
+                var snapshot = new Snapshot()
+                {
+                    AggregateId = aggregateId,
+                    Version = version,
+                    Timestamp = DateTimeOffset.UtcNow,
+                    Data = data
+                };
+
+                await _snapshotCollection.InsertOneAsync(snapshot);
+
+                await session.CommitTransactionAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while storing a snapshot.");
+                await session.AbortTransactionAsync();
+                throw;
+            }
         }
 
         public async Task<Snapshot> GetSnapshotAsync(string aggregateId, int version)
@@ -131,6 +160,5 @@ namespace IoT.Persistence
             var aggregateIds = await _eventCollection.DistinctAsync<string>("AggregateId", Builders<DomainEvent>.Filter.Empty);
             return await aggregateIds.ToListAsync();
         }
-
     }
 }
