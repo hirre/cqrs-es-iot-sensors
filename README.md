@@ -24,7 +24,7 @@ rs.reconfig(cfg, { force: true });
 ```
 
 1. Run the .NET web API service, it uses Scalar UI for API visualization (development environment).
-2. Try the endpoints.
+2. Try the endpoints with e.g. the test data in "TestData" folder.
 
 ## Future Improvements
 For even better scalability the read model worker can be put into a separate service that listens to incoming events from a queue (e.g. RabbitMQ & Kafka). In this scenario the CQRS service publishes events to the queue which is then processed by the standalone worker service. The worker finally updates the read models.
