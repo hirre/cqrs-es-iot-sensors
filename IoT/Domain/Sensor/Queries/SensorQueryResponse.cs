@@ -4,7 +4,7 @@ namespace IoT.Domain.Sensor.Queries
 {
     public record SensorQueryResponse
     {
-        public required string AggregateId { get; init; }
+        public required string Id { get; init; }
 
         public required UnitType UnitType { get; init; }
 

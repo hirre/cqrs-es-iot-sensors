@@ -10,7 +10,7 @@ namespace IoT.Persistence.Events
         [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; } = "";
 
-        public required string AggregateId { get; init; }
+        public required string EntityId { get; init; }
 
         public required EventTypes EventType { get; init; }
 

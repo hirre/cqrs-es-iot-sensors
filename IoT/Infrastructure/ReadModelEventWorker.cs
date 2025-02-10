@@ -1,5 +1,5 @@
 ﻿using IoT.Common;
-using IoT.Domain.Sensor.Aggregates;
+using IoT.Domain.Sensor.Projections;
 using IoT.Extensions;
 using IoT.Interfaces;
 using IoT.Persistence.Events;
@@ -29,15 +29,15 @@ namespace IoT.Infrastructure
 
                     try
                     {
-                        var cacheKey = $"AggregateId:{e.AggregateId}";
+                        var cacheKey = $"{e.EventType.ToEventPrefix()}:ID:{e.EntityId}";
 
-                        IAggregate? aggregate = await CreateAggregate(e, cacheKey);
+                        IProjection? projection = await CreateProjection(e, cacheKey);
 
-                        if (aggregate != null)
+                        if (projection != null)
                         {
-                            aggregate.ApplyEvent(e);
+                            projection.ApplyEvent(e);
 
-                            await UpdateCache(aggregate, cacheKey);
+                            await UpdateCache(projection, cacheKey);
                         }
                     }
                     catch (Exception ex)
@@ -46,7 +46,7 @@ namespace IoT.Infrastructure
                     }
 
                     _logger.LogDebug($"EVENT: {e.Id}\t | " +
-                        $"{e.AggregateId}\t | " +
+                        $"{e.EntityId}\t | " +
                         $"{e.Version}\t| " +
                         $"{e.Timestamp}");
                 }
@@ -55,7 +55,7 @@ namespace IoT.Infrastructure
             _logger.LogInformation("ReadModelEventWorker stopping.");
         }
 
-        private async Task<IAggregate?> CreateAggregate(DomainEvent e, string cacheKey)
+        private async Task<IProjection?> CreateProjection(DomainEvent e, string cacheKey)
         {
             if (e.EventType == EventTypes.SensorStoreCmdEvent)
             {
@@ -64,21 +64,21 @@ namespace IoT.Infrastructure
                     return null;
                 }
 
-                // Lookup aggregate in cache (or create if it doesn't exist)
+                // Lookup projection in cache (or create if it doesn't exist)
                 return await _distributedCache.GetOrSetDataAsync(cacheKey, () =>
                 {
-                    return Task.FromResult(new SensorProjectionBase(e.AggregateId, payload.UnitType));
+                    return Task.FromResult(new SensorProjectionBase(e.EntityId, payload.UnitType));
                 });
             }
 
             return null;
         }
 
-        private async Task UpdateCache(IAggregate aggregate, string cacheKey)
+        private async Task UpdateCache(IProjection projection, string cacheKey)
         {
-            if (aggregate is SensorProjectionBase sar)
+            if (projection is SensorProjectionBase sar)
             {
-                // Update aggregate in cache
+                // Update projection in cache
                 await _distributedCache.SetDataAsync(cacheKey, sar);
             }
         }

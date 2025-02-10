@@ -1,4 +1,4 @@
-﻿using IoT.Domain.Sensor.Aggregates;
+﻿using IoT.Domain.Sensor.Projections;
 using IoT.Interfaces;
 using IoT.Persistence.Events;
 using MessagePack;
@@ -8,10 +8,10 @@ namespace IoT.Common
     [MessagePackObject]
     [Union(0, typeof(SensorProjectionBase))]
     [method: SerializationConstructor]
-    public abstract class AbstractSensorProjectionBase(string aggregateId, UnitType unitType) : IAggregate
+    public abstract class AbstractSensorProjectionBase(string id, UnitType unitType) : IProjection
     {
         [Key(0)]
-        public string AggregateId { get; } = aggregateId;
+        public string Id { get; } = id;
 
         [Key(1)]
         public UnitType UnitType { get; } = unitType;

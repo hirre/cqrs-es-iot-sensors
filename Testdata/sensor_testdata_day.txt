@@ -1,5 +1,5 @@
 {
-  "sensorId": "125342543",
+  "id": "125342543",
   "sensorUnitType": 9,
   "period": 3,
   "timestamp": "2025-02-06T00:00:00Z",

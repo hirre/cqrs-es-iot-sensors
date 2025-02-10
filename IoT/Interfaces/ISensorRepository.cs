@@ -8,14 +8,14 @@ namespace IoT.Interfaces
     {
         public Task<DomainEvent> StoreSensorDataAsync(StoreSensorDataCommand cmd);
 
-        public Task<(UnitType UnitType, double Value)> GetLatestMonthlyAverageAsync(string aggregateId);
+        public Task<(UnitType UnitType, double Value)> GetLatestMonthlyAverageAsync(string id);
 
-        public Task<(UnitType UnitType, double Value)> GetLatestDailyAverageAsync(string aggregateId);
+        public Task<(UnitType UnitType, double Value)> GetLatestDailyAverageAsync(string id);
 
         public Task HydrateReadModels(CancellationToken cancellationToken = default);
 
-        public Task TakeSnapShot(string aggregateId);
+        public Task TakeSnapShot((EventTypes EvType, string Id) tup);
 
-        public Task<IEnumerable<string>> GetUniqueAggregateIds();
+        public Task<IEnumerable<(EventTypes EvType, string Id)>> GetUniqueEntityIds();
     }
 }

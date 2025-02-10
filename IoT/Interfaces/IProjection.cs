@@ -2,7 +2,7 @@
 
 namespace IoT.Interfaces
 {
-    public interface IAggregate
+    public interface IProjection
     {
         public void ApplyEvent(DomainEvent e, object? data = null);
     }

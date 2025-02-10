@@ -4,6 +4,6 @@ namespace IoT.Domain.Sensor.Queries
 {
     public record SensorGetLatestMonthlyAvgQuery : IQuery
     {
-        public required string AggregateId { get; init; }
+        public required string Id { get; init; }
     }
 }

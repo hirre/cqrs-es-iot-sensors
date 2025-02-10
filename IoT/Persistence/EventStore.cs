@@ -1,4 +1,6 @@
-﻿using IoT.Persistence.Events;
+﻿using IoT.Common;
+using IoT.Persistence.Events;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
@@ -17,6 +19,8 @@ namespace IoT.Persistence
         private readonly MongoClient _mongoClient;
         private readonly IMongoCollection<DomainEvent> _eventCollection;
         private readonly IMongoCollection<Snapshot> _snapshotCollection;
+
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
 
         public EventStore(ILogger<EventStore> logger, IConfiguration config)
         {
@@ -44,16 +48,19 @@ namespace IoT.Persistence
 
             _snapshotCollection = _mongoDatabase.GetCollection<Snapshot>(EVENTSTORE_SNAPSHOT_NAME);
             var snapshotIndexKeys = Builders<Snapshot>.IndexKeys
-                .Ascending(x => x.AggregateId)
+                .Ascending(x => x.EntityType)
+                .Ascending(x => x.EntityId)
                 .Descending(x => x.Version);
             var snapshotUniqueKeys = Builders<Snapshot>.IndexKeys.Combine(
-                Builders<Snapshot>.IndexKeys.Ascending(x => x.AggregateId),
+                Builders<Snapshot>.IndexKeys.Ascending(x => x.EntityType),
+                Builders<Snapshot>.IndexKeys.Ascending(x => x.EntityId),
                 Builders<Snapshot>.IndexKeys.Descending(x => x.Version));
 
             _snapshotCollection.Indexes.CreateMany(
             [
                 new CreateIndexModel<Snapshot>(snapshotIndexKeys, new CreateIndexOptions { Name = "SnapshotIndex" }),
-                new CreateIndexModel<Snapshot>(snapshotUniqueKeys, new CreateIndexOptions { Unique = true, Name = "SnapshotUniqueIndex" })
+                new CreateIndexModel<Snapshot>(snapshotUniqueKeys,
+                new CreateIndexOptions { Unique = true, Name = "SnapshotUniqueIndex" })
             ]);
         }
 
@@ -66,9 +73,11 @@ namespace IoT.Persistence
 
             try
             {
-                // Find the latest version of this aggregate's events
+                _semaphore.Wait(5000);
+
+                // Find the latest version of this entity's events
                 var lastEvent = await _eventCollection
-                    .Find(Builders<DomainEvent>.Filter.Eq(x => x.AggregateId, document.AggregateId))
+                    .Find(Builders<DomainEvent>.Filter.Eq(x => x.EntityId, document.EntityId))
                     .Sort(Builders<DomainEvent>.Sort.Descending(x => x.Version))
                     .Limit(1)
                     .FirstOrDefaultAsync();
@@ -85,13 +94,18 @@ namespace IoT.Persistence
                 await session.AbortTransactionAsync();
                 throw;
             }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
-        public async Task<IAsyncCursor<DomainEvent>> GetEventsAsync(string aggregateId, int startVersion)
+        public async Task<IAsyncCursor<DomainEvent>> GetEventsAsync(EventTypes evType, string entityId, int startVersion)
         {
             return await _eventCollection.Find(Builders<DomainEvent>.Filter
                 .And(
-                        Builders<DomainEvent>.Filter.Eq(x => x.AggregateId, aggregateId),
+                Builders<DomainEvent>.Filter.Eq(x => x.EventType, evType),
+                        Builders<DomainEvent>.Filter.Eq(x => x.EntityId, entityId),
                         Builders<DomainEvent>.Filter.Gte(x => x.Version, startVersion)
                     ))
                 .Sort(Builders<DomainEvent>.Sort
@@ -99,21 +113,24 @@ namespace IoT.Persistence
                 .ToCursorAsync();
         }
 
-        public async Task StoreSnapShotAsync(string aggregateId, int version, byte[] data)
+        public async Task StoreSnapShotAsync(string eventType, string id, int version, byte[] data)
         {
             using var session = await _mongoClient.StartSessionAsync();
             session.StartTransaction();
 
             try
             {
-                var snap = await GetSnapshotAsync(aggregateId, version);
+                _semaphore.Wait(5000);
+
+                var snap = await GetSnapshotAsync(eventType, id, version);
 
                 if (snap != null)
                     return;
 
                 var snapshot = new Snapshot()
                 {
-                    AggregateId = aggregateId,
+                    EntityId = id,
+                    EntityType = eventType,
                     Version = version,
                     Timestamp = DateTimeOffset.UtcNow,
                     Data = data
@@ -129,13 +146,18 @@ namespace IoT.Persistence
                 await session.AbortTransactionAsync();
                 throw;
             }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
-        public async Task<Snapshot> GetSnapshotAsync(string aggregateId, int version)
+        public async Task<Snapshot> GetSnapshotAsync(string entityType, string entityId, int version)
         {
             var filter = Builders<Snapshot>.Filter
                             .And(
-                                    Builders<Snapshot>.Filter.Eq(x => x.AggregateId, aggregateId),
+                                    Builders<Snapshot>.Filter.Eq(x => x.EntityType, entityType),
+                                    Builders<Snapshot>.Filter.Eq(x => x.EntityId, entityId),
                                     Builders<Snapshot>.Filter.Eq(x => x.Version, version)
                                 );
 
@@ -145,9 +167,13 @@ namespace IoT.Persistence
                                              .FirstOrDefaultAsync();
         }
 
-        public async Task<Snapshot> GetLatestSnapshotAsync(string aggregateId)
+        public async Task<Snapshot> GetLatestSnapshotAsync(string entityType, string entityId)
         {
-            var filter = Builders<Snapshot>.Filter.Eq(x => x.AggregateId, aggregateId);
+            var filter = Builders<Snapshot>.Filter
+                .And(
+                    Builders<Snapshot>.Filter.Eq(x => x.EntityType, entityType),
+                    Builders<Snapshot>.Filter.Eq(x => x.EntityId, entityId)
+                );
 
             return await _snapshotCollection.Find(filter)
                                              .Sort(Builders<Snapshot>.Sort.Descending(x => x.Version))
@@ -155,10 +181,31 @@ namespace IoT.Persistence
                                              .FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<string>> GetUniqueAggregateIdsAsync()
+        public async Task<IEnumerable<(EventTypes EvType, string Id)>> GetUniqueEntityIdsAsync()
         {
-            var aggregateIds = await _eventCollection.DistinctAsync<string>("AggregateId", Builders<DomainEvent>.Filter.Empty);
-            return await aggregateIds.ToListAsync();
+            var uniqueEntities = await _eventCollection.Aggregate()
+                .Group(new BsonDocument { { "_id", new BsonDocument { { "EventType", "$EventType" },
+                    { "EntityId", "$EntityId" } } } })
+                .ToListAsync();
+
+            var result = new List<(EventTypes EvType, string EntityId)>();
+
+            foreach (var uniqueEntity in uniqueEntities)
+            {
+                var eventTypeString = uniqueEntity["_id"]["EventType"]?.ToString();
+                var entityId = uniqueEntity["_id"]["EntityId"].ToString();
+
+                if (string.IsNullOrEmpty(eventTypeString) || string.IsNullOrEmpty(entityId))
+                {
+                    continue;
+                }
+
+                var eventType = Enum.Parse<EventTypes>(eventTypeString);
+
+                result.Add((eventType, entityId));
+            }
+
+            return result;
         }
     }
 }

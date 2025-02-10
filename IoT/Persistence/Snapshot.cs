@@ -9,7 +9,9 @@ namespace IoT.Persistence
         [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; } = "";
 
-        public required string AggregateId { get; init; }
+        public required string EntityId { get; init; }
+
+        public required string EntityType { get; init; }
 
         public required int Version { get; init; }
 

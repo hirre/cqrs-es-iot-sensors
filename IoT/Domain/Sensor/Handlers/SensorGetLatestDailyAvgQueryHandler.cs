@@ -14,11 +14,11 @@ namespace IoT.Domain.Sensor.Handlers
         {
             try
             {
-                var result = await _sensorRepository.GetLatestDailyAverageAsync(query.AggregateId);
+                var result = await _sensorRepository.GetLatestDailyAverageAsync(query.Id);
 
                 return Result<SensorQueryResponse>.Success(new SensorQueryResponse()
                 {
-                    AggregateId = query.AggregateId,
+                    Id = query.Id,
                     UnitType = result.UnitType,
                     Value = result.Value
                 });

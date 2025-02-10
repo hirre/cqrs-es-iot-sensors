@@ -5,7 +5,7 @@ namespace IoT.Domain.Sensor.Commands
 {
     public record StoreSensorDataCommand() : ICommand
     {
-        public required string SensorId { get; init; }
+        public required string Id { get; init; }
 
         public required UnitType SensorUnitType { get; init; }
 

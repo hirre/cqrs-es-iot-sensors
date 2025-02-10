@@ -36,7 +36,7 @@ using (var scope = app.Services.CreateScope())
         await sensorRepo.HydrateReadModels();
 }
 
-// Start a timer that wakes up at midnight every day and takes a snapshot of the current state of the aggregates
+// Start a timer that wakes up at midnight every day and takes a snapshot of the current state of the projections
 var timer = new Timer(async _ =>
 {
     using var scope = app.Services.CreateScope();
@@ -45,13 +45,13 @@ var timer = new Timer(async _ =>
     if (sensorRepo == null)
         return;
 
-    var uniqueAggregates = await sensorRepo.GetUniqueAggregateIds();
+    var uniqueEntityIds = await sensorRepo.GetUniqueEntityIds();
 
-    foreach (var aggregateId in uniqueAggregates)
+    foreach (var tup in uniqueEntityIds)
     {
-        await sensorRepo.TakeSnapShot(aggregateId);
+        await sensorRepo.TakeSnapShot(tup);
     }
-    //}, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));  // For testing purposes, take a snapshot every 10 seconds
-}, null, TimeSpan.Zero, TimeSpan.FromDays(1));
+}, null, TimeSpan.FromDays(1) - DateTime.Now.TimeOfDay, TimeSpan.FromDays(1));
+//TODO: for testing purposes ---> }, null, TimeSpan.Zero, TimeSpan.FromSeconds(35));
 
 app.Run();

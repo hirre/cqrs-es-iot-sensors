@@ -21,7 +21,7 @@ namespace IoT.Domain.Sensor.Handlers
                     .Success(new StoreSensorDataCommandResponse()
                     {
                         Id = e.Id,
-                        SensorId = command.SensorId,
+                        SensorId = command.Id,
                         ResponseTimestamp = DateTimeOffset.UtcNow
                     });
             }

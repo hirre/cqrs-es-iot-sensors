@@ -9,7 +9,7 @@ namespace IoT.Common
     [Union(0, typeof(SensorDayProjection))]
     [Union(1, typeof(SensorHourProjection))]
     [method: SerializationConstructor]
-    public abstract class AbstractSensorProjection(double value, DateTimeOffset timestamp) : IAggregate
+    public abstract class AbstractSensorProjection(double value, DateTimeOffset timestamp) : IProjection
     {
         [Key(0)]
         public double Value { get; } = value;

@@ -1,6 +1,6 @@
 ﻿using IoT.Common;
-using IoT.Domain.Sensor.Aggregates;
 using IoT.Domain.Sensor.Commands;
+using IoT.Domain.Sensor.Projections;
 using IoT.Extensions;
 using IoT.Infrastructure;
 using IoT.Interfaces;
@@ -23,7 +23,7 @@ namespace IoT.Domain.Sensor.Repository
         {
             var e = new DomainEvent()
             {
-                AggregateId = cmd.SensorId,
+                EntityId = cmd.Id,
                 Timestamp = DateTimeOffset.UtcNow,
                 EventType = EventTypes.SensorStoreCmdEvent,
                 Payload = new SensorPayload()
@@ -51,25 +51,27 @@ namespace IoT.Domain.Sensor.Repository
             {
                 _logger.LogInformation("Hydrating read models...");
 
-                var uniqueAggregates = await _eventStore.GetUniqueAggregateIdsAsync();
+                var uniqueEntityIds = await _eventStore.GetUniqueEntityIdsAsync();
 
-                foreach (var aggregateId in uniqueAggregates)
+                foreach (var tup in uniqueEntityIds)
                 {
+                    var evType = tup.EvType.ToEventPrefix();
+
                     // Restore the snapshots first
-                    var snapshot = await _eventStore.GetLatestSnapshotAsync(aggregateId);
+                    var snapshot = await _eventStore.GetLatestSnapshotAsync(evType, tup.Id);
 
                     var startVersion = 0;
 
                     if (snapshot != null)
                     {
                         startVersion = snapshot.Version + 1;
-                        var cacheKey = $"AggregateId:{snapshot.AggregateId}";
+                        var cacheKey = $"{evType}:ID:{snapshot.EntityId}";
                         await _distributedCache.SetAsync(cacheKey, snapshot.Data);
-                        _logger.LogInformation("Restored snapshot for aggregate {AggregateId}.", snapshot.AggregateId);
+                        _logger.LogInformation("Restored snapshot for entity {EntityId}.", snapshot.EntityId);
                     }
 
                     // Restore the rest of the events
-                    var eventBatch = await _eventStore.GetEventsAsync(aggregateId, startVersion);
+                    var eventBatch = await _eventStore.GetEventsAsync(tup.EvType, tup.Id, startVersion);
 
                     while (await eventBatch.MoveNextAsync(cancellationToken))
                     {
@@ -89,57 +91,58 @@ namespace IoT.Domain.Sensor.Repository
             }
         }
 
-        public Task<(UnitType, double)> GetLatestMonthlyAverageAsync(string aggregateId)
+        public Task<(UnitType, double)> GetLatestMonthlyAverageAsync(string id)
         {
-            var cacheKey = $"AggregateId:{aggregateId}";
+            var cacheKey = $"Senor:ID:{id}";
 
-            if (_distributedCache.TryGetDataValue<SensorProjectionBase>(cacheKey, out var sensorAggregateRoot))
+            if (_distributedCache.TryGetDataValue<SensorProjectionBase>(cacheKey, out var sensorProjectionBase))
             {
-                if (sensorAggregateRoot == null)
+                if (sensorProjectionBase == null)
                 {
-                    throw new Exception("Sensor aggregate root was null.");
+                    throw new Exception("Sensor projection base was null.");
                 }
 
-                return Task.FromResult((sensorAggregateRoot.UnitType, sensorAggregateRoot.CalculatedMonthlyAverage));
+                return Task.FromResult((sensorProjectionBase.UnitType, sensorProjectionBase.CalculatedMonthlyAverage));
             }
 
-            throw new Exception("Sensor aggregate root not found.");
+            throw new Exception("Sensor projection base not found.");
         }
 
-        public Task<(UnitType, double)> GetLatestDailyAverageAsync(string aggregateId)
+        public Task<(UnitType, double)> GetLatestDailyAverageAsync(string id)
         {
-            var cacheKey = $"AggregateId:{aggregateId}";
+            var cacheKey = $"Sensor:ID:{id}";
 
-            if (_distributedCache.TryGetDataValue<SensorProjectionBase>(cacheKey, out var sensorAggregateRoot))
+            if (_distributedCache.TryGetDataValue<SensorProjectionBase>(cacheKey, out var sensorProjectionBase))
             {
-                if (sensorAggregateRoot == null)
+                if (sensorProjectionBase == null)
                 {
-                    throw new Exception("Sensor aggregate root was null.");
+                    throw new Exception("Sensor projection base was null.");
                 }
 
-                return Task.FromResult((sensorAggregateRoot.UnitType, sensorAggregateRoot.CalculatedDailyAverage));
+                return Task.FromResult((sensorProjectionBase.UnitType, sensorProjectionBase.CalculatedDailyAverage));
             }
 
-            throw new Exception("Sensor aggregate root not found.");
+            throw new Exception("Sensor projection base not found.");
         }
 
-        public async Task TakeSnapShot(string aggregateId)
+        public async Task TakeSnapShot((EventTypes EvType, string Id) tup)
         {
-            var cacheKey = $"AggregateId:{aggregateId}";
+            var eventPrefix = tup.EvType.ToEventPrefix();
+            var cacheKey = $"{eventPrefix}:ID:{tup.Id}";
 
-            var aggregateRawData = await _distributedCache.GetAsync(cacheKey);
+            var projectionRawData = await _distributedCache.GetAsync(cacheKey);
 
-            if (aggregateRawData != null &&
-                _distributedCache.TryGetDataValue<SensorProjectionBase>(cacheKey, out var aggregateRoot) && aggregateRoot != null)
+            if (projectionRawData != null &&
+                _distributedCache.TryGetDataValue<SensorProjectionBase>(cacheKey, out var projectionBase) && projectionBase != null)
             {
-                _logger.LogInformation($"Taking snapshot for aggregate {aggregateId}...");
-                await _eventStore.StoreSnapShotAsync(aggregateRoot.AggregateId, aggregateRoot.Version, aggregateRawData);
+                _logger.LogInformation($"Taking snapshot for projection {eventPrefix}:{tup.Id}...");
+                await _eventStore.StoreSnapShotAsync(eventPrefix, projectionBase.Id, projectionBase.Version, projectionRawData);
             }
         }
 
-        public Task<IEnumerable<string>> GetUniqueAggregateIds()
+        public Task<IEnumerable<(EventTypes EvType, string Id)>> GetUniqueEntityIds()
         {
-            return _eventStore.GetUniqueAggregateIdsAsync();
+            return _eventStore.GetUniqueEntityIdsAsync();
         }
     }
 }

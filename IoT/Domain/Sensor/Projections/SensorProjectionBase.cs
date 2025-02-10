@@ -1,23 +1,22 @@
 ﻿using IoT.Common;
-using IoT.Domain.Sensor.Projections;
 using IoT.Persistence.Events;
 using MessagePack;
 using System.Collections.Concurrent;
 
-namespace IoT.Domain.Sensor.Aggregates
+namespace IoT.Domain.Sensor.Projections
 {
     [MessagePackObject]
     [method: SerializationConstructor]
-    public partial class SensorProjectionBase(string aggregateId, UnitType unitType) : AbstractSensorProjectionBase(aggregateId, unitType)
+    public partial class SensorProjectionBase(string id, UnitType unitType) : AbstractSensorProjectionBase(id, unitType)
     {
         private DateOnly _maxDate31Day = DateOnly.MinValue;
         private DateTime _maxDate24Hour = DateTime.MinValue;
 
         [Key(3)]
-        public ConcurrentDictionary<DateOnly, SensorDayProjection> CyclicSensor31DayAggregates { get; } = [];
+        public ConcurrentDictionary<DateOnly, SensorDayProjection> CyclicSensor31DayProjections { get; } = [];
 
         [Key(4)]
-        public ConcurrentDictionary<DateTime, SensorHourProjection> CyclicSensor24HourAggregates { get; } = [];
+        public ConcurrentDictionary<DateTime, SensorHourProjection> CyclicSensor24HourProjections { get; } = [];
 
         [Key(5)]
         public double CalculatedMonthlyAverage { get; private set; }
@@ -62,9 +61,9 @@ namespace IoT.Domain.Sensor.Aggregates
                             _maxDate24Hour = hourDataPoint.TimestampRead.DateTime;
                         }
 
-                        var hourAggregate = new SensorHourProjection(hourDataPoint.Value, hourDataPoint.TimestampRead);
-                        CyclicSensor24HourAggregates.TryAdd(hourDataPoint.TimestampRead.DateTime, hourAggregate);
-                        hourAggregate.ApplyEvent(e);
+                        var hourProjection = new SensorHourProjection(hourDataPoint.Value, hourDataPoint.TimestampRead);
+                        CyclicSensor24HourProjections.TryAdd(hourDataPoint.TimestampRead.DateTime, hourProjection);
+                        hourProjection.ApplyEvent(e);
                     }
 
                     CalculateDailyAverage();
@@ -86,9 +85,9 @@ namespace IoT.Domain.Sensor.Aggregates
                         _maxDate31Day = DateOnly.FromDateTime(dayDataPoint.TimestampRead.Date);
                     }
 
-                    var dayAggregate = new SensorDayProjection(dayDataPoint.Value, dayDataPoint.TimestampRead);
-                    CyclicSensor31DayAggregates.TryAdd(DateOnly.FromDateTime(dayDataPoint.TimestampRead.DateTime), dayAggregate);
-                    dayAggregate.ApplyEvent(e);
+                    var dayProjection = new SensorDayProjection(dayDataPoint.Value, dayDataPoint.TimestampRead);
+                    CyclicSensor31DayProjections.TryAdd(DateOnly.FromDateTime(dayDataPoint.TimestampRead.DateTime), dayProjection);
+                    dayProjection.ApplyEvent(e);
 
                     CalculateMonthlyAverage();
 
@@ -103,9 +102,9 @@ namespace IoT.Domain.Sensor.Aggregates
 
             var latestMonthBreakDate = _maxDate31Day.AddMonths(-1);
 
-            foreach (var dayAggregateKey in CyclicSensor31DayAggregates.Keys.Where(x => x >= latestMonthBreakDate))
+            foreach (var dayProjectionKey in CyclicSensor31DayProjections.Keys.Where(x => x >= latestMonthBreakDate))
             {
-                sum += CyclicSensor31DayAggregates[dayAggregateKey].Value;
+                sum += CyclicSensor31DayProjections[dayProjectionKey].Value;
                 count++;
             }
 
@@ -124,9 +123,9 @@ namespace IoT.Domain.Sensor.Aggregates
 
             var latest24HourBreakDate = _maxDate24Hour.AddDays(-1);
 
-            foreach (var hourAggregateKey in CyclicSensor24HourAggregates.Keys.Where(x => x >= latest24HourBreakDate))
+            foreach (var hourProjectionKey in CyclicSensor24HourProjections.Keys.Where(x => x >= latest24HourBreakDate))
             {
-                sum += CyclicSensor24HourAggregates[hourAggregateKey].Value;
+                sum += CyclicSensor24HourProjections[hourProjectionKey].Value;
                 count++;
             }
 
