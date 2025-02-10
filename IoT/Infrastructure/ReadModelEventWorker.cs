@@ -29,7 +29,7 @@ namespace IoT.Infrastructure
 
                     try
                     {
-                        var cacheKey = $"{e.EventType.ToEventPrefix()}:ID:{e.EntityId}";
+                        var cacheKey = $"{e.EventType.ToEventPrefix()}:{e.EntityId}";
 
                         IProjection? projection = await CreateProjection(e, cacheKey);
 

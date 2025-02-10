@@ -65,7 +65,7 @@ namespace IoT.Domain.Sensor.Repository
                     if (snapshot != null)
                     {
                         startVersion = snapshot.Version + 1;
-                        var cacheKey = $"{evType}:ID:{snapshot.EntityId}";
+                        var cacheKey = $"{evType}:{snapshot.EntityId}";
                         await _distributedCache.SetAsync(cacheKey, snapshot.Data);
                         _logger.LogInformation("Restored snapshot for entity {EntityId}.", snapshot.EntityId);
                     }
@@ -93,7 +93,7 @@ namespace IoT.Domain.Sensor.Repository
 
         public Task<(UnitType, double)> GetLatestMonthlyAverageAsync(string id)
         {
-            var cacheKey = $"Senor:ID:{id}";
+            var cacheKey = $"Senor:{id}";
 
             if (_distributedCache.TryGetDataValue<SensorProjectionBase>(cacheKey, out var sensorProjectionBase))
             {
@@ -110,7 +110,7 @@ namespace IoT.Domain.Sensor.Repository
 
         public Task<(UnitType, double)> GetLatestDailyAverageAsync(string id)
         {
-            var cacheKey = $"Sensor:ID:{id}";
+            var cacheKey = $"Sensor:{id}";
 
             if (_distributedCache.TryGetDataValue<SensorProjectionBase>(cacheKey, out var sensorProjectionBase))
             {
@@ -128,7 +128,7 @@ namespace IoT.Domain.Sensor.Repository
         public async Task TakeSnapShot((EventTypes EvType, string Id) tup)
         {
             var eventPrefix = tup.EvType.ToEventPrefix();
-            var cacheKey = $"{eventPrefix}:ID:{tup.Id}";
+            var cacheKey = $"{eventPrefix}:{tup.Id}";
 
             var projectionRawData = await _distributedCache.GetAsync(cacheKey);
 
