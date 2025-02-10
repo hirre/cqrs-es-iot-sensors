@@ -67,7 +67,7 @@ namespace IoT.Infrastructure
                 // Lookup aggregate in cache (or create if it doesn't exist)
                 return await _distributedCache.GetOrSetDataAsync(cacheKey, () =>
                 {
-                    return Task.FromResult(new SensorAggregateRoot(e.AggregateId, payload.UnitType));
+                    return Task.FromResult(new SensorProjectionBase(e.AggregateId, payload.UnitType));
                 });
             }
 
@@ -76,7 +76,7 @@ namespace IoT.Infrastructure
 
         private async Task UpdateCache(IAggregate aggregate, string cacheKey)
         {
-            if (aggregate is SensorAggregateRoot sar)
+            if (aggregate is SensorProjectionBase sar)
             {
                 // Update aggregate in cache
                 await _distributedCache.SetDataAsync(cacheKey, sar);

@@ -6,9 +6,9 @@ using MessagePack;
 namespace IoT.Common
 {
     [MessagePackObject]
-    [Union(0, typeof(SensorAggregateRoot))]
+    [Union(0, typeof(SensorProjectionBase))]
     [method: SerializationConstructor]
-    public abstract class AbstractSensorAggregateRoot(string aggregateId, UnitType unitType) : IAggregate
+    public abstract class AbstractSensorProjectionBase(string aggregateId, UnitType unitType) : IAggregate
     {
         [Key(0)]
         public string AggregateId { get; } = aggregateId;

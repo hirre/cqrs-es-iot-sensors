@@ -1,4 +1,5 @@
 ﻿using IoT.Common;
+using IoT.Domain.Sensor.Projections;
 using IoT.Persistence.Events;
 using MessagePack;
 using System.Collections.Concurrent;
@@ -7,16 +8,16 @@ namespace IoT.Domain.Sensor.Aggregates
 {
     [MessagePackObject]
     [method: SerializationConstructor]
-    public partial class SensorAggregateRoot(string aggregateId, UnitType unitType) : AbstractSensorAggregateRoot(aggregateId, unitType)
+    public partial class SensorProjectionBase(string aggregateId, UnitType unitType) : AbstractSensorProjectionBase(aggregateId, unitType)
     {
         private DateOnly _maxDate31Day = DateOnly.MinValue;
         private DateTime _maxDate24Hour = DateTime.MinValue;
 
         [Key(3)]
-        public ConcurrentDictionary<DateOnly, SensorDayAggregate> CyclicSensor31DayAggregates { get; } = [];
+        public ConcurrentDictionary<DateOnly, SensorDayProjection> CyclicSensor31DayAggregates { get; } = [];
 
         [Key(4)]
-        public ConcurrentDictionary<DateTime, SensorHourAggregate> CyclicSensor24HourAggregates { get; } = [];
+        public ConcurrentDictionary<DateTime, SensorHourProjection> CyclicSensor24HourAggregates { get; } = [];
 
         [Key(5)]
         public double CalculatedMonthlyAverage { get; private set; }
@@ -61,7 +62,7 @@ namespace IoT.Domain.Sensor.Aggregates
                             _maxDate24Hour = hourDataPoint.TimestampRead.DateTime;
                         }
 
-                        var hourAggregate = new SensorHourAggregate(hourDataPoint.Value, hourDataPoint.TimestampRead);
+                        var hourAggregate = new SensorHourProjection(hourDataPoint.Value, hourDataPoint.TimestampRead);
                         CyclicSensor24HourAggregates.TryAdd(hourDataPoint.TimestampRead.DateTime, hourAggregate);
                         hourAggregate.ApplyEvent(e);
                     }
@@ -85,7 +86,7 @@ namespace IoT.Domain.Sensor.Aggregates
                         _maxDate31Day = DateOnly.FromDateTime(dayDataPoint.TimestampRead.Date);
                     }
 
-                    var dayAggregate = new SensorDayAggregate(dayDataPoint.Value, dayDataPoint.TimestampRead);
+                    var dayAggregate = new SensorDayProjection(dayDataPoint.Value, dayDataPoint.TimestampRead);
                     CyclicSensor31DayAggregates.TryAdd(DateOnly.FromDateTime(dayDataPoint.TimestampRead.DateTime), dayAggregate);
                     dayAggregate.ApplyEvent(e);
 

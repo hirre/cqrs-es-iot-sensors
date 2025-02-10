@@ -1,4 +1,4 @@
-﻿using IoT.Domain.Sensor.Aggregates;
+﻿using IoT.Domain.Sensor.Projections;
 using IoT.Interfaces;
 using IoT.Persistence.Events;
 using MessagePack;
@@ -6,10 +6,10 @@ using MessagePack;
 namespace IoT.Common
 {
     [MessagePackObject]
-    [Union(0, typeof(SensorDayAggregate))]
-    [Union(1, typeof(SensorHourAggregate))]
+    [Union(0, typeof(SensorDayProjection))]
+    [Union(1, typeof(SensorHourProjection))]
     [method: SerializationConstructor]
-    public abstract class AbstractSensorAggregate(double value, DateTimeOffset timestamp) : IAggregate
+    public abstract class AbstractSensorProjection(double value, DateTimeOffset timestamp) : IAggregate
     {
         [Key(0)]
         public double Value { get; } = value;

@@ -93,7 +93,7 @@ namespace IoT.Domain.Sensor.Repository
         {
             var cacheKey = $"AggregateId:{aggregateId}";
 
-            if (_distributedCache.TryGetDataValue<SensorAggregateRoot>(cacheKey, out var sensorAggregateRoot))
+            if (_distributedCache.TryGetDataValue<SensorProjectionBase>(cacheKey, out var sensorAggregateRoot))
             {
                 if (sensorAggregateRoot == null)
                 {
@@ -110,7 +110,7 @@ namespace IoT.Domain.Sensor.Repository
         {
             var cacheKey = $"AggregateId:{aggregateId}";
 
-            if (_distributedCache.TryGetDataValue<SensorAggregateRoot>(cacheKey, out var sensorAggregateRoot))
+            if (_distributedCache.TryGetDataValue<SensorProjectionBase>(cacheKey, out var sensorAggregateRoot))
             {
                 if (sensorAggregateRoot == null)
                 {
@@ -130,7 +130,7 @@ namespace IoT.Domain.Sensor.Repository
             var aggregateRawData = await _distributedCache.GetAsync(cacheKey);
 
             if (aggregateRawData != null &&
-                _distributedCache.TryGetDataValue<SensorAggregateRoot>(cacheKey, out var aggregateRoot) && aggregateRoot != null)
+                _distributedCache.TryGetDataValue<SensorProjectionBase>(cacheKey, out var aggregateRoot) && aggregateRoot != null)
             {
                 _logger.LogInformation($"Taking snapshot for aggregate {aggregateId}...");
                 await _eventStore.StoreSnapShotAsync(aggregateRoot.AggregateId, aggregateRoot.Version, aggregateRawData);
